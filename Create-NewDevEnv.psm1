@@ -1,3 +1,9 @@
+[CmdLetBinding()]
+param(
+    [string]$vmName = "test2-win10"
+    # TODO: Or should I just make interactive? Or profile based?
+)
+
 Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 choco feature enable -n allowGlobalConfirmation
 Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -11,7 +17,6 @@ if ($isRenamingComputer.Contains("Y")) {
     $computerName = Read-Host "What is the new name for this vm? (a reboot will occur after this):" 
     Rename-Computer -NewName $computerName -Restart -Force #TODO: enforce computer naming standards
 }
-
 # TODO: Initialize disk above
 
 ## vbox and vagrant should be allowed to run on external drive.
@@ -19,7 +24,26 @@ if ($isRenamingComputer.Contains("Y")) {
 ## After installing virtualbox, go to Preferences and set the default machine folder to D:\
 ## need to automate this: https://medium.com/@cedricdue/moving-vagrant-boxes-and-related-virtualbox-vms-to-another-drive-f1d7c50d20bchttps://medium.com/@cedricdue/moving-vagrant-boxes-and-related-virtualbox-vms-to-another-drive-f1d7c50d20bc
 choco install virtualbox -Y
-.\Add-NewVirtualDrive.ps1 -vmName "test2-win10" -fullPathToVdiToCreate G:\vm\test2-win10\secondHardDisk.vdi -initialDiskSize 10000
+.\Add-NewVirtualDrive.ps1 -vmName $vmName -fullPathToVdiToCreate G:\vm\test2-win10\secondHardDisk.vdi -initialDiskSize 10000
+
+# How many monitors for vm?
+[string]$monitorCount = $null
+$countEnteredIsValid = $false
+while (-not $countEnteredIsValid) {
+    $monitorCount = Read-Host "How many virtual monitors? (1-3 or -1 to quit)?:"
+    $monitorCountInt = [int]$monitorCount
+    if ($monitorCountInt -gt 0 -and $monitorCountInt -lt 4) {
+        $countEnteredIsValid = $true
+        vboxmanage modifyvm $vmName --monitorcount $monitorCountInt
+        continue
+    }
+    elseif ($monitorCountInt.Equals(-1)) {
+        return
+    }
+    else {
+        # intentionally empty
+    }
+} 
 
 choco install vagrant -Y
 if (Test-Path "D:\") {
